@@ -1,0 +1,20 @@
+[project]
+name = "exp"
+description = "experimental job submitter for sqlite3"
+readme = "README.md"
+requires-python = ">=3.11"
+
+dependencies = [
+  "absl-py",
+  "numpy",
+  "pyyaml",
+]
+
+dynamic = ["version"]
+
+
+[project.optional-dependencies]
+dev = [
+  "pylint>=2.6.0",
+  "yapf"
+]
