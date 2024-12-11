@@ -1,9 +1,16 @@
-initdb.sql:
-	echo create table results\(\\n\
+default: test
+
+data:
+	mkdir -p data
+
+data/initdb.sql:
+	echo create table results \(\\n\
 		hash text primary key,\\n\
+		git_hash text,\\n\
 		-- Config fields\\n\
-		manidim int NOT NULL,\\n\
-		manistyle text NOT NULL,\\n\
+		manidim int,\\n\
+		manistyle text,\\n\
+		init_idcs text,\\n\
 		greedy boolean DEFAULT false,\\n\
 		-- Results fields\\n\
 		train_err double precision,\\n\
@@ -13,24 +20,36 @@ initdb.sql:
 		scheduled boolean DEFAULT false,\\n\
 		running boolean DEFAULT false,\\n\
 		failed boolean DEFAULT false,\\n\
-		completed boolean DEFAULT false\\n\
-	\) >> initdb.sql
+		completed boolean DEFAULT false,\\n\
+		\"opti.test\" integer\\n\
+	\) > data/initdb.sql
 
-tt:
-	echo a\
-		bv  >> test.txt
 
-dbfields.yaml:
-	echo - [hash, manidim, manistyle, greedy] > dbfields.yaml
-	echo - [train_err, test_err] >> dbfields.yaml
+data/dbfields.yaml:
+	echo hash > data/dbfields.yaml
+	echo manidim >> data/dbfields.yaml
+	echo "# comment" >> data/dbfields.yaml
+	echo manistyle >> data/dbfields.yaml
+	echo "" >> data/dbfields.yaml
+	echo greedy >> data/dbfields.yaml
+	echo init_idcs >> data/dbfields.yaml
+	echo opti.test >> data/dbfields.yaml
 
 
 .venv:
 	python3 -m venv .venv
 	.venv/bin/pip install -e .
 
-test: dbfields.yaml initdb.sql .venv
-	rm data/test.db
-	mkdir -p data
-	sqlite3 data/test.db < initdb.sql
+data/test.db: data/initdb.sql | data
+	sqlite3 data/test.db < data/initdb.sql
+
+test: data/dbfields.yaml .venv data/test.db
 	.venv/bin/python exp/__init__.py
+	rm -f data/dbfields.yaml
+	rm -f data/initdb.sql
+	rm -f data/test.db
+
+clean:
+	rm -f data/dbfields.yaml
+	rm -f data/initdb.sql
+	rm -f data/test.db
