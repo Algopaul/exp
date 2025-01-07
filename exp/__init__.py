@@ -130,13 +130,23 @@ def generate_commands(base_command,
     query += f" AND {' AND '.join(extra_conditions)}"
   c.execute(query)
   results = c.fetchall()
-  conn.close()
-  s = ''
+  try:
+    for r in results:
+      c.execute("UPDATE results SET scheduled=True WHERE hash=?", (r['hash'],))
+    conn.commit()
+  except Exception as e:
+    conn.rollback()
+    raise e
+  finally:
+    conn.close()
+
+  # Generate commands
+  commands = []
   for r in results:
-    mark_scheduled(r['hash'], db_filename)
-    s += evaluate(base_command,
-                  r) + ' ' + dict_to_flags(r) + ' ' + suffix + '\n'
-  return s
+    command = evaluate(base_command, r) + ' ' + dict_to_flags(r) + ' ' + suffix
+    commands.append(command)
+
+  return '\n'.join(commands)
 
 
 def mark_all(hash, status, filename=None, timeout=DEFAULT_TIMEOUT):
