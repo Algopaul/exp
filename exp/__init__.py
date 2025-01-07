@@ -39,6 +39,44 @@ def add_config(config_dict, filename=None, timeout=DEFAULT_TIMEOUT):
   pass
 
 
+def add_configs(config_dicts, filename=None, timeout=DEFAULT_TIMEOUT):
+  """
+    Add multiple configurations to the SQLite database in a single transaction.
+
+    Parameters:
+    - config_dicts (list): List of configuration dictionaries to add.
+    - filename (str): SQLite database file name.
+    - timeout (int): SQLite connection timeout.
+    """
+  file = dbfile(filename)
+  conn = sqlite3.connect(file, timeout=timeout)
+  c = conn.cursor()
+
+  # Prepare all inserts in a single transaction
+  try:
+    for config_dict in config_dicts:
+      # Ensure 'hash' key exists
+      if 'hash' not in config_dict:
+        config_dict['hash'] = hash_string(config_dict)
+
+      # Prepare keys and values
+      keys, values = keys_vals_sqlite_ready(config_dict)
+      keys = ', '.join([*keys])
+      values_q = ', '.join(['?'] * len(values))
+
+      # Execute the INSERT statement
+      c.execute(f"INSERT OR IGNORE INTO results ({keys}) VALUES ({values_q})",
+                values)
+
+    # Commit all changes in one transaction
+    conn.commit()
+  except Exception as e:
+    conn.rollback()
+    raise e
+  finally:
+    conn.close()
+
+
 def add_result(hash, result_dict, filename=None, timeout=DEFAULT_TIMEOUT):
   file = dbfile(filename)
   conn = sqlite3.connect(file, timeout=timeout)
@@ -196,8 +234,7 @@ def main(_):
     add_config(d, 'data/test.db')
   add_config(cc2, 'data/test.db')
   add_config(cc3, 'data/test.db')
-  add_config(cc4, 'data/test.db')
-  add_config(cc5, 'data/test.db')
+  add_configs([cc4, cc5], 'data/test.db')
 
   mark_running('should_not_appear', 'data/test.db')
 
